@@ -66,16 +66,17 @@ export const updateUser = (req, res) => {
 }
 
 export const updatePutUser = (req, res) => {
-    const { cpf } = req.params
 
-    const foundUser = users.findIndex((user) => user.cpf === cpf)
+    const userFound = users.find(user => user.cpf == req.params.cpf)
+    if (!userFound) return res.status(404).json({error: { message: "CPF not found"}})
 
-    if (foundUser){
-        const user = req.body
-        user.push(user)
-
-        res.status(200).send(`User ${user.name} has been update!`)
-    } else {
-        res.status(404).json({ message: "This CPF you are looking for does not exist" })        
+    const user = {
+        ...userFound,
+        ...req.body
     }
+
+    users[users.cpf - 1] = user
+
+    return res.json(user)
+
 }
