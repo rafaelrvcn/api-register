@@ -1,18 +1,20 @@
 import express from 'express'
-import { createUser, deleteUser, getUser, getUsers, updateUser, updatePutUser } from '../controllers/user.js'
+import { createUser, deleteUser, getUser, getUsers, updateUser, updatePutUser, getLogin, verifyJWT } from '../controllers/user.js'
 
 const router = express.Router()
 
 router.get('/', getUsers)
 
+router.get('/:cpf', verifyJWT, getUser)
+
 router.post('/', createUser)
 
-router.get('/:cpf', getUser)
+router.post('/login', getLogin)
 
-router.delete('/:cpf', deleteUser)
+router.delete('/:cpf', verifyJWT, deleteUser)
 
-router.patch('/:cpf', updateUser)
+router.patch('/:cpf', verifyJWT, updateUser)
 
-router.put('/:cpf', updatePutUser)
+router.put('/:cpf', verifyJWT, updatePutUser)
 
 export default router

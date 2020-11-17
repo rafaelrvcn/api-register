@@ -1,26 +1,62 @@
+import users from '../data/user.json'
+import fs from 'fs'
+import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv-safe'
 import Joi from 'joi'
 import { userSchema } from '../validations.js'
 
-let users = []
+const dotenvConfig = dotenv.config()
+
+export const verifyJWT = (req, res, next) => {
+
+    const token = req.headers['x-access-token']
+    if (!token) return res.status(401).json({ auth: false, 
+        message: "No token provided." })
+
+    jwt.verify(token, process.env.SECRET, (err, decoded) => {
+        if(err) return res.status(500).json({ auth: false, 
+            message: "Failed to authenticate token." })
+
+        req.cpf = decoded.cpf
+        next()
+    })
+    
+}
 
 export const getUsers = (req, res) => {
     res.send(users)
 }
 
-export const createUser = async (req, res, next) => {
+export const createUser = (req, res) => {
 
-    try{
-        const user = await userSchema.validateAsync(req.body)
-        
-        users.push(user)
-        
-        res.status(200).send(`User ${user.name} added to the database!`)
-    } catch (error) {
-        if (error.isJoi === true ) error.status = 422 && res.send(error.message)
+    const { name, phone, cpf, email, birthDate, password } = req.body
 
-            next(error)
+    users.push({ name, phone, cpf, email, birthDate, password })
+
+    fs.writeFile("./data/user.json", JSON.stringify(users, null, 2), (error) => {
+        if (error) return res.status(error.status).json({
+            error: {
+                message: "Something when wrong while registering the user",
+                name: error.name
+            }
+        })
+        return res.json({ name, phone, cpf, email, birthDate, password })
+    })
+}
+
+export const getLogin = (req, res) => {
+
+    const { cpf, password } = req.body
+    const foundUser = users.find(user => user.cpf == cpf && user.password == password)
+
+    if(foundUser) {
+        const token = jwt.sign({cpf}, process.env.SECRET, {expiresIn: 300})
+
+        return res.json({ auth: true, token: token })
     }
-    console.log(error.isJoi);
+
+    res.status(401).json({ message: "Invalid login" })
+
 }
 
 export const getUser = (req, res) => {
@@ -53,7 +89,7 @@ export const deleteUser = (req, res) => {
 
 export const updateUser = (req, res) => {
     const { cpf } = req.params
-    const { name, phone, email, birthDate } = req.body
+    const { name, phone, email, birthDate, password } = req.body
 
     const user = users.find((user) => user.cpf === cpf)
 
@@ -61,6 +97,7 @@ export const updateUser = (req, res) => {
     if(phone) user.phone = phone
     if(email) user.email = email
     if(birthDate) user.birthDate = birthDate
+    if(password) user.password = password
 
     res.send(`User with the CPF ${cpf} has been update`)
 }
